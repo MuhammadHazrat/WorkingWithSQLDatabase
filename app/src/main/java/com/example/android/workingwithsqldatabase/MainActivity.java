@@ -2,6 +2,7 @@ package com.example.android.workingwithsqldatabase;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,6 +13,8 @@ import android.widget.Switch;
 
 import com.google.android.material.button.MaterialButton;
 import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.Scanner;
 
@@ -32,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ImportDB(DATABASE_NAME);
+//        ImportDB(DATABASE_NAME);
 
         aSwitch = findViewById(R.id.swch);
         editText = findViewById(R.id.editText);
@@ -60,22 +63,41 @@ public class MainActivity extends AppCompatActivity {
             if (state) sex = "F";
             else sex = "M";
 
-//            PlotBaby(name, sex);
+            PlotBaby(name, sex);
         });
 
+    }
+
+    private void PlotBaby(String name, String sex) {
+        SQLiteDatabase database = openOrCreateDatabase(DATABASE_NAME, MODE_PRIVATE, null);
+        String query = "Select year, rank FROM ranks WHERE name='" + name + "' AND sex='" + sex + "';";
+        Cursor cr = database.rawQuery(query, null);
+        LineGraphSeries<DataPoint> series = new LineGraphSeries<>();
+
+        while (cr.moveToNext()) {
+            int year = cr.getInt(cr.getColumnIndex("year"));
+            int rank = cr.getInt(cr.getColumnIndex("rank"));
+            Log.e("tag", name + ": " + Integer.toString(year) + ": " + Integer.toString(rank));
+
+            series.appendData(new DataPoint(year, MAX_RANK - rank), false, 100);
+        }
+        cr.close();
+
+        graphView.removeAllSeries();
+        graphView.addSeries(series);
     }
 
     private void ImportDB(String databaseName) {
         SQLiteDatabase db = openOrCreateDatabase(databaseName, MODE_PRIVATE, null);
 
         int resId = getResources().getIdentifier(databaseName, "raw", getPackageName());
+        int lineNo = 0;
         Scanner sc = new Scanner(getResources().openRawResource(resId));
 
         String query = new String("");
 
         while (sc.hasNextLine()) {
 
-            int lineNo = 0;
             String line = sc.nextLine();
 
             if (line.trim().startsWith("--")) {
